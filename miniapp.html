@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Tebesa Login</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>body{font-family:system-ui,sans-serif;background:#120E12;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center}h2{margin:0 0 12px}p{opacity:.85;line-height:1.5}</style>
+</head><body>
+<h2>Tebesa</h2>
+<p id="msg">Logging you in...</p>
+<script>
+const API='https://wisemrodjophhzcnkmst.supabase.co/functions/v1/rapid-processor';
+const KEY='sb_publishable_lfGEMbXwTAxXBTATVFnFxA_SItmRBs2';
+const tg=window.Telegram&&Telegram.WebApp;
+const msg=document.getElementById('msg');
+(async function(){
+  try{
+    if(!tg||!tg.initData){ msg.textContent='Please open this from the Tebesa app.'; return; }
+    tg.ready(); try{tg.expand();}catch(e){}
+    const token=(tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||'';
+    if(!/^[a-f0-9]{32,64}$/.test(token)){ msg.textContent='Login link not valid. Please try again from the Tebesa app.'; return; }
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},
+      body:JSON.stringify({action:'app_login_push',token:token,data:tg.initData})});
+    if(r.ok){
+      msg.innerHTML='&#9989; Logged in.<br>Go back to the Tebesa app.';
+      setTimeout(function(){ try{tg.close();}catch(e){} },1500);
+    } else {
+      msg.textContent='Login failed. Please try again from the Tebesa app.';
+    }
+  }catch(e){ msg.textContent='Network error. Please try again.'; }
+})();
+</script>
+</body></html>
