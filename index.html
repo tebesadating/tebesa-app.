@@ -2,35 +2,45 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tebesa - Login with Telegram</title>
-<style>body{font-family:system-ui,sans-serif;background:#120E12;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center}</style>
+<style>
+body{font-family:system-ui,sans-serif;background:#120E12;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center}
+p{max-width:320px;line-height:1.5}
+input{font-size:32px;letter-spacing:.4em;text-align:center;width:9em;padding:12px;border-radius:14px;border:1px solid #ffffff33;background:#ffffff10;color:#fff;margin:14px 0}
+button{font-size:18px;font-weight:700;padding:14px 36px;border:0;border-radius:14px;background:#e11d74;color:#fff}
+button:disabled{opacity:.5}
+</style>
 </head><body>
 <h2>Tebesa</h2>
-<p id="msg">Tap the button to log in with Telegram.</p>
-<!-- replace tebesadating_bot (no @). Your domain must be set with BotFather: /setdomain -->
+<p id="msg">Type the 4-digit code shown in the Tebesa app, then log in with Telegram.</p>
+<input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" placeholder="0000">
+<!-- Your domain must be set with BotFather: /setdomain -->
 <script async src="https://telegram.org/js/telegram-widget.js?22"
   data-telegram-login="tebesadating_bot" data-size="large" data-userpic="false"
   data-request-access="write" data-onauth="onTelegramAuth(user)"></script>
+<button id="go" type="button" disabled style="margin-top:16px">Finish login</button>
 <script>
-const API='https://wisemrodjophhzcnkmst.supabase.co/functions/v1/rapid-processor';
+const API='https://wisemrodjophhzcnkmst.supabase.co/functions/v1/tebesa-gateway';
 const KEY='sb_publishable_lfGEMbXwTAxXBTATVFnFxA_SItmRBs2';
 const token=new URLSearchParams(location.search).get('t')||'';
-async function onTelegramAuth(user){
-  const msg=document.getElementById('msg');
+const msg=document.getElementById('msg'), codeEl=document.getElementById('code'), go=document.getElementById('go');
+let tgData='';
+function refresh(){ go.disabled=!(tgData && codeEl.value.length===4); }
+codeEl.addEventListener('input',function(){ codeEl.value=codeEl.value.replace(/\D/g,'').slice(0,4); refresh(); });
+function onTelegramAuth(user){ tgData=new URLSearchParams(user).toString(); msg.textContent='Telegram login received. Type the code from the app and tap Finish login.'; refresh(); }
+go.addEventListener('click',async function(){
+  go.disabled=true; msg.textContent='Checking...';
   try{
+    if(!/^[a-f0-9]{48}$/.test(token)){ msg.textContent='This login link is not valid. Please try again from the Tebesa app.'; return; }
     const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},
-      body:JSON.stringify({action:'app_login_push',token,data:new URLSearchParams(user).toString()})});
-    msg.textContent=r.ok?'Logged in. Go back to the Tebesa app.':'Login failed. Please try again from the app.';
-  }catch(e){ msg.textContent='Network error. Please try again.'; }
-}
-</script>
-
-<script>
-// If the Telegram button has not appeared after 6 seconds, show what to check.
+      body:JSON.stringify({action:'login_push',token:token,code:codeEl.value,data:tgData})});
+    const j=await r.json().catch(function(){return {};});
+    if(r.ok) msg.textContent='Logged in. Go back to the Tebesa app.';
+    else if(j.error==='bad_code'){ msg.textContent='Wrong code. Check the code in the Tebesa app.'; go.disabled=false; }
+    else msg.textContent='Login failed or expired. Please try again from the app.';
+  }catch(e){ msg.textContent='Network error. Please try again.'; go.disabled=false; }
+});
 setTimeout(function(){
-  if(!document.querySelector('iframe')){
-    var m=document.getElementById('msg');
-    if(m) m.innerHTML='The Telegram button did not load.<br><br>Check:<br>1) BotFather /setdomain is <b>tebesadating.github.io</b><br>2) the bot username in this page is correct<br>3) telegram.org opens on this network (try another network or VPN)';
-  }
+  if(!document.querySelector('iframe')){ msg.innerHTML='The Telegram button did not load.<br><br>Check:<br>1) BotFather /setdomain is <b>tebesadating.github.io</b><br>2) telegram.org opens on this network'; }
 },6000);
 </script>
 </body></html>
